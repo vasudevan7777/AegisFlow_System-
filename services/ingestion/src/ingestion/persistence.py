@@ -49,7 +49,8 @@ class PgStore:
                         conn.execute(UPSERT_EDGE, e)
                 return inserted
         except IntegrityError as exc:
-            if getattr(exc.orig, "sqlstate", None) == "23503": # foreign_key_violation
+            sqlstate = getattr(exc.orig, "sqlstate", None) or getattr(exc.orig, "pgcode", None)
+            if sqlstate == "23503": # foreign_key_violation
                 raise UnknownEntity(str(exc.orig).splitlines()[0]) from None
             raise
 
