@@ -7,6 +7,18 @@ import sys
 import urllib.request
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+
+# Automatically load .env if variables are not exported in the shell
+if not os.getenv("DATABASE_URL"):
+    env_file = ROOT / ".env"
+    if env_file.exists():
+        for line in env_file.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, v = line.split("=", 1)
+                os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
+    if not os.getenv("DATABASE_URL"):
+        os.environ["DATABASE_URL"] = "postgresql+psycopg://aegis:aegis_dev_2026@localhost:5432/aegisflow"
 FILES = [
     "ml/src/aegis_ml/features/definitions.py", "ml/src/aegis_ml/features/offline.py",
     "ml/src/aegis_ml/features/graph_features.py",
