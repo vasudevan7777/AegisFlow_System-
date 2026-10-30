@@ -57,15 +57,19 @@ else:
     import redis
     dsn = os.environ["DATABASE_URL"].replace("postgresql+psycopg://", "postgresql://", 1)
     with psycopg.connect(dsn) as c:
-        n_tx = c.execute("SELECT count(*) FROM transactions").fetchone()[0]
+        row = c.execute("SELECT count(*) FROM transactions").fetchone()
+        n_tx = row[0] if row else 0
         ok("transactions stored", n_tx > 0, f"({n_tx})")
-        dup = c.execute("SELECT count(*) FROM (SELECT 1 FROM entity_edges GROUP BY src_type, "
-            "src_id, dst_type, dst_id, edge_type HAVING count(*) > 1) d").fetchone()[0]
+        row = c.execute("SELECT count(*) FROM (SELECT 1 FROM entity_edges GROUP BY src_type, "
+            "src_id, dst_type, dst_id, edge_type HAVING count(*) > 1) d").fetchone()
+        dup = row[0] if row else 0
         ok("no duplicate edges", dup == 0)
-        snap = c.execute("SELECT max(computed_at) > now() - interval '65 minutes' "
-            "FROM graph_feature_snapshots").fetchone()[0]
+        row = c.execute("SELECT max(computed_at) > now() - interval '65 minutes' "
+            "FROM graph_feature_snapshots").fetchone()
+        snap = row[0] if row else False
         ok("graph snapshot within the last hour", bool(snap))
-        kf = c.execute("SELECT count(*) FROM known_fraud_entities").fetchone()[0]
+        row = c.execute("SELECT count(*) FROM known_fraud_entities").fetchone()
+        kf = row[0] if row else 0
         ok("known fraud seeded (pre-T0)", kf > 0, f"({kf})")
     rds = redis.Redis.from_url(os.getenv("REDIS_URL", "redis://localhost:6379/0"))
     ok("feat:acct:* keys present", next(rds.scan_iter("feat:acct:*", count=1000), None) is not None)

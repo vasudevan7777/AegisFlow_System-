@@ -65,7 +65,8 @@ def seed_customers(cur, n: int = 120) -> list[str]:
              random.choice(['IN', 'IN', 'IN', 'SG', 'AE']),
              'verified', random.choice(['low', 'low', 'medium', 'high']), i % 37 == 0),
         )
-        customer_id = cur.fetchone()['customer_id']
+        row = cur.fetchone()
+        customer_id = row['customer_id'] if row else ''
         for a in range(random.randint(1, 2)):
             cur.execute(
                 'INSERT INTO accounts (customer_id, account_number, account_type, currency, '
@@ -74,7 +75,9 @@ def seed_customers(cur, n: int = 120) -> list[str]:
                 (customer_id, f'IN66AEGS{i:07d}{a}', random.choice(['current', 'savings', 'card']),
                  'INR', '2021-06-01', '2026-09-01', 'active'),
             )
-            account_ids.append(cur.fetchone()['account_id'])
+            acct_row = cur.fetchone()
+            if acct_row:
+                account_ids.append(acct_row['account_id'])
     return account_ids
  
  
@@ -107,10 +110,11 @@ def seed_transactions(cur, account_ids: list[str], n: int = 5000) -> None:
  
 def main() -> None:
     random.seed(20260911)
-    with psycopg.connect(DSN, row_factory=dict_row) as conn:
-        with conn.cursor() as cur:
+    with psycopg.connect(DSN) as conn:
+        with conn.cursor(row_factory=dict_row) as cur:
             cur.execute('SELECT COUNT(*) AS c FROM customers')
-            if cur.fetchone()['c'] > 0:
+            count_row = cur.fetchone()
+            if count_row and count_row['c'] > 0:
                 print('already seeded — run `make reset` first to reseed')
                 return
             seed_rules(cur)
